@@ -1704,7 +1704,7 @@ export const initializeSampleData = () => {
         id: 'user1',
         email: 'citizen@test.com',
         password: 'demo123',
-        full_name: 'John Citizen',
+        full_name: 'Aditya',
         role: 'citizen',
         state: 'Maharashtra',
         city: 'Mumbai',
@@ -2042,7 +2042,7 @@ export const initializeSampleData = () => {
 
     // Add sample rewards to create leaderboard data
     const sampleRewards = [
-      // User1 (John Citizen) rewards
+      // User1 (Aditya) rewards
       { id: 'reward1', user_id: 'user1', report_id: 'report1', points: 150, earnings: 0, weight: 2.5, type: 'report_completion', created_at: new Date(Date.now() - 5*24*60*60*1000).toISOString() },
       { id: 'reward2', user_id: 'user1', report_id: null, points: 200, earnings: 0, weight: 3.0, type: 'bonus_activity', created_at: new Date(Date.now() - 10*24*60*60*1000).toISOString() },
       { id: 'reward3', user_id: 'user1', report_id: null, points: 300, earnings: 0, weight: 4.5, type: 'weekly_bonus', created_at: new Date(Date.now() - 15*24*60*60*1000).toISOString() },
