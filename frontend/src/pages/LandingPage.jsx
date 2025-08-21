@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import logoImage from '@/assets/Logo.png';
+import logoImage2 from '@/assets/logo2.png';
 import {
   Camera, MapPin, Trophy, Users, Recycle, Star, ArrowRight, CheckCircle,
   Globe, Smartphone, Award, TrendingUp, Heart, Shield, Zap, Play,
@@ -428,8 +429,7 @@ const LandingPageNew = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <img src={logoImage} alt="CleanSight" className="w-56 h-10 object-contain" />
-                <span className="text-2xl font-bold">CleanSight</span>
+                <img src={logoImage2} alt="CleanSight" className="w-44 w-10 object-contain" />
               </div>
               <p className="text-gray-400 text-lg leading-relaxed max-w-md">
                 Transforming waste management through AI-powered detection, 
