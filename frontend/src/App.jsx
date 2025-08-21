@@ -7,7 +7,6 @@ import LandingPage from "./pages/LandingPage";
 import Impact from "./pages/Impact";
 import Help from "./pages/Help";
 
-// Citizen Components
 import Dashboard from "./components/citizen/Dashboard";
 import Report from "./components/citizen/Report";
 import Map from "./components/citizen/Map";
@@ -16,13 +15,11 @@ import Rewards from "./components/citizen/Rewards";
 import Community from "./components/citizen/Community";
 import CitizenSettings from "./components/citizen/Settings";
 
-// Ragpicker Components
 import RagpickerTasks from "./components/ragpicker/Tasks";
 import RagpickerMap from "./components/ragpicker/Map";
 import RagpickerEarnings from "./components/ragpicker/Earnings";
 import RagpickerProfile from "./components/ragpicker/Profile";
 
-// Admin Components
 import AdminDashboard from "./components/admin/Dashboard";
 import AdminModeration from "./components/admin/Moderation";
 import AdminAssignment from "./components/admin/Assignment";
@@ -31,22 +28,18 @@ import AdminUsers from "./components/admin/Users";
 import AdminPartners from "./components/admin/Partners";
 import AdminSettings from "./components/admin/Settings";
 
-// Institution Components
 import InstitutionDashboard from "./components/instituitions/Dashboard";
 import InstitutionReports from "./components/instituitions/Reports";
 import InstitutionMembers from "./components/instituitions/Members";
 import InstitutionAnalytics from "./components/instituitions/Analytics";
 import InstitutionSettings from "./components/instituitions/Settings";
 
-// Auth Components
 import Login from "./components/auth/Login";
 import Register from "./components/auth/Register";
 
-// Route Guards
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 
-// NotFound
 import NotFound from "./components/NotFound";
 
 const App = () => (
@@ -55,7 +48,6 @@ const App = () => (
       <BrowserRouter>
         <Layout>
           <Routes>
-              {/* Public Routes - Only accessible when NOT logged in */}
               <Route path="/" element={
                 <PublicRoute>
                   <LandingPage />
@@ -72,7 +64,6 @@ const App = () => (
                 </PublicRoute>
               } />
               
-              {/* Auth Routes - Only accessible when NOT logged in */}
               <Route path="/login" element={
                 <PublicRoute>
                   <Login />
@@ -84,7 +75,6 @@ const App = () => (
                 </PublicRoute>
               } />
               
-              {/* Citizen Routes - Protected */}
               <Route path="/dashboard" element={
                 <ProtectedRoute allowedRoles={['citizen']}>
                   <Dashboard />
