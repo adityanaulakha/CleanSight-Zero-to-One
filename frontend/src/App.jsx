@@ -3,8 +3,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Layout from "./components/Layout";
 
-// Public Pages
-import LandingPage from "./pages/landingpage";
+import LandingPage from "./pages/LandingPage";
 import Impact from "./pages/Impact";
 import Help from "./pages/Help";
 
