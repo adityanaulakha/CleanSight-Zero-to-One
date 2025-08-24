@@ -27,9 +27,7 @@ const Report = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [detectionResult, setDetectionResult] = useState(null);
-  const [annotatedImage, setAnnotatedImage] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [canSubmitReport, setCanSubmitReport] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [recentReports, setRecentReports] = useState([]);
   const [formData, setFormData] = useState({
@@ -85,7 +83,6 @@ const Report = () => {
       reader.onload = (e) => {
         console.log('File read successfully'); // Debug log
         setSelectedImage(e.target?.result);
-        // Call YOLO detection instead of simulation
         analyzeImageWithYOLO(file);
       };
       reader.onerror = () => {
@@ -103,18 +100,17 @@ const Report = () => {
   const analyzeImageWithYOLO = async (file) => {
     setIsAnalyzing(true);
     setDetectionResult(null);
-    setAnnotatedImage(null);
-    setCanSubmitReport(false);
     
     try {
-      // Create FormData to send the image file
       const formData = new FormData();
       formData.append('file', file);
       
-      console.log('Sending image to YOLO model...');
+      console.log('🤖 Sending image to YOLO API...', file.name);
       
-      // Send to your Python backend
-      const response = await fetch('http://localhost:5000/predict', {
+      // Use environment variable for API URL, fallback to localhost for development
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      
+      const response = await fetch(`${apiUrl}/predict`, {
         method: 'POST',
         body: formData,
       });
@@ -124,64 +120,68 @@ const Report = () => {
       }
       
       const result = await response.json();
-      console.log('YOLO detection result:', result);
+      console.log('🔍 YOLO Analysis Result:', result);
       
       if (result.success) {
-        // Set the detection results
-        setDetectionResult({
-          garbageDetected: result.garbage_detected,
-          confidence: result.confidence,
-          garbageProbability: result.garbage_probability,
-          message: result.garbage_detected 
-            ? `Garbage detected with ${(result.confidence * 100).toFixed(1)}% confidence`
-            : `No garbage detected (${(result.confidence * 100).toFixed(1)}% confidence)`
-        });
+        let detectionMessage = "";
+        let category = "other";
         
-        // Set annotated image if available
-        if (result.annotated_image) {
-          setAnnotatedImage(`data:image/png;base64,${result.annotated_image}`);
+        if (result.garbage_detected) {
+          detectionMessage = `Garbage detected with ${(result.confidence * 100).toFixed(1)}% confidence`;
+          category = "mixed";
+          
+          // Set appropriate category based on confidence level
+          if (result.confidence > 0.8) {
+            category = "high-confidence";
+          } else if (result.confidence > 0.6) {
+            category = "medium-confidence";  
+          } else {
+            category = "low-confidence";
+          }
+        } else {
+          detectionMessage = "No garbage detected in this image";
+          category = "clean";
         }
         
-        // Allow report submission only if garbage is detected
-        setCanSubmitReport(result.garbage_detected);
+        setDetectionResult({
+          category: category,
+          result: detectionMessage,
+          confidence: result.confidence,
+          garbageDetected: result.garbage_detected,
+          annotatedImage: result.annotated_image
+        });
         
-        // Update form category if garbage detected
-        if (result.garbage_detected) {
-          setFormData(prev => ({
-            ...prev,
-            category: "waste"
-          }));
+        setFormData(prev => ({
+          ...prev,
+          category: category
+        }));
+        
+        // If no garbage detected with high confidence, show warning
+        if (!result.garbage_detected && result.confidence < 0.3) {
+          setTimeout(() => {
+            alert('⚠️ AI Analysis: No garbage detected in this image.\n\nFor accurate reporting:\n• Ensure the image clearly shows garbage/waste\n• Take photo in good lighting\n• Focus on the waste items\n\nYou can still submit this report if you believe there is an issue.');
+          }, 500);
         }
         
       } else {
-        throw new Error(result.error || 'Detection failed');
+        throw new Error(result.error || 'Analysis failed');
       }
       
     } catch (error) {
-      console.error('Error analyzing image:', error);
+      console.error('YOLO Analysis Error:', error);
       
-      // Check if it's a connection error (backend not running)
-      if (error.message.includes('fetch') || error.message.includes('NetworkError')) {
-        alert('Cannot connect to AI detection service. Please ensure the backend server is running on port 5000.\n\nTo start the backend:\n1. Navigate to the backend folder\n2. Run: python app.py');
-        
-        // Fallback: allow manual submission with warning
-        setDetectionResult({
-          garbageDetected: null,
-          confidence: 0,
-          garbageProbability: 0,
-          message: 'AI detection unavailable - manual verification required'
-        });
-        setCanSubmitReport(true); // Allow submission in case of backend issues
-      } else {
-        alert(`AI detection failed: ${error.message}\n\nPlease try again or contact support.`);
-        setDetectionResult({
-          garbageDetected: false,
-          confidence: 0,
-          garbageProbability: 0,
-          message: 'Detection failed - please try again'
-        });
-        setCanSubmitReport(false);
-      }
+      // Fallback to indicate analysis failed
+      setDetectionResult({
+        category: "analysis-failed",
+        result: "AI analysis unavailable - please describe the waste manually",
+        confidence: 0,
+        garbageDetected: false,
+        error: true
+      });
+      
+      // Show user-friendly error message
+      alert('🤖 AI Analysis Temporarily Unavailable\n\nThe image analysis service is currently unavailable. You can still submit your report by providing a detailed description of the waste.');
+      
     } finally {
       setIsAnalyzing(false);
     }
@@ -287,6 +287,22 @@ const Report = () => {
       return;
     }
     
+    // Check if AI detected no garbage with high confidence
+    if (detectionResult && !detectionResult.garbageDetected && detectionResult.confidence > 0.7 && !detectionResult.error) {
+      const userConfirm = window.confirm(
+        '🤖 AI Analysis Notice\n\n' +
+        'Our AI system indicates this image may not contain visible garbage.\n\n' +
+        'Confidence: No garbage detected (' + (detectionResult.confidence * 100).toFixed(1) + '% certain)\n\n' +
+        'Would you like to proceed anyway?\n\n' +
+        '• Click OK to submit the report\n' +
+        '• Click Cancel to review/retake the photo'
+      );
+      
+      if (!userConfirm) {
+        return;
+      }
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -297,15 +313,26 @@ const Report = () => {
         address: formData.address,
         landmark: formData.landmark,
         latitude: currentLocation?.latitude || 28.4595, // Default to Gurugram
-        longitude: currentLocation?.longitude || 77.0466
+        longitude: currentLocation?.longitude || 77.0466,
+        aiAnalysis: detectionResult ? {
+          garbageDetected: detectionResult.garbageDetected,
+          confidence: detectionResult.confidence,
+          category: detectionResult.category
+        } : null
       };
 
       console.log('🏢 Creating report with citizen zone:', user?.zone); // Debug log
       const result = await reportService.createReport(reportData, selectedFile);
       
+      // Show enhanced success message with AI results
+      let aiMessage = '';
+      if (detectionResult && !detectionResult.error) {
+        aiMessage = `\n🤖 AI Analysis: ${detectionResult.garbageDetected ? 'Garbage detected' : 'No garbage detected'} (${(detectionResult.confidence * 100).toFixed(1)}% confidence)`;
+      }
+      
       // Show enhanced success message with zone information
       const zoneText = user?.zone?.split(' - ')[1] || user?.zone || 'your area';
-      alert(`Report submitted successfully! 🎉\n\nDetails:\n• Title: ${formData.title}\n• Location: ${formData.address}\n• Severity: ${formData.severity}\n• Your Zone: ${zoneText}\n• Status: Pending Assignment\n\n✅ Task automatically created for collection kiosks in ${zoneText}!\n\nYou'll receive points once the cleanup is completed.`);
+      alert(`Report submitted successfully! 🎉\n\nDetails:\n• Title: ${formData.title}\n• Location: ${formData.address}\n• Severity: ${formData.severity}\n• Your Zone: ${zoneText}\n• Status: Pending Assignment${aiMessage}\n\n✅ Task automatically created for collection kiosks in ${zoneText}!\n\nYou'll receive points once the cleanup is completed.`);
       
       // Log for cross-portal synchronization debugging
       console.log('📝 Report created successfully:', result);
@@ -322,8 +349,6 @@ const Report = () => {
       setSelectedImage(null);
       setSelectedFile(null);
       setDetectionResult(null);
-      setAnnotatedImage(null);
-      setCanSubmitReport(false);
       setCurrentLocation(null);
       
       // Reload recent reports
@@ -412,13 +437,13 @@ const Report = () => {
               {selectedImage ? (
                 <div className="space-y-4">
                   <img 
-                    src={annotatedImage || selectedImage} 
+                    src={detectionResult?.annotatedImage ? `data:image/png;base64,${detectionResult.annotatedImage}` : selectedImage} 
                     alt="Uploaded garbage" 
                     className="max-w-full h-48 object-cover rounded-lg mx-auto"
                   />
-                  {annotatedImage && (
+                  {detectionResult?.annotatedImage && (
                     <p className="text-xs text-muted-foreground text-center">
-                      Showing AI-annotated version with detection boxes
+                      🤖 AI-annotated image with detected objects highlighted
                     </p>
                   )}
                   {isAnalyzing && (
@@ -432,56 +457,32 @@ const Report = () => {
                       <Badge 
                         variant="outline" 
                         className={
-                          detectionResult.garbageDetected === true 
-                            ? 'bg-success/10 text-success border-success' 
-                            : detectionResult.garbageDetected === false
-                            ? 'bg-destructive/10 text-destructive border-destructive'
-                            : 'bg-warning/10 text-warning border-warning'
+                          detectionResult.error ? "bg-destructive/10 text-destructive border-destructive" :
+                          detectionResult.garbageDetected ? "bg-success/10 text-success border-success" :
+                          "bg-warning/10 text-warning border-warning"
                         }
                       >
-                        {detectionResult.garbageDetected === true ? (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        ) : detectionResult.garbageDetected === false ? (
-                          <X className="h-4 w-4 mr-2" />
-                        ) : (
+                        {detectionResult.error ? (
                           <AlertCircle className="h-4 w-4 mr-2" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
                         )}
-                        {detectionResult.message}
+                        {detectionResult.result}
                       </Badge>
-                      
-                      {detectionResult.garbageDetected === true && (
-                        <div className="text-center p-3 bg-success/5 border border-success/20 rounded-lg">
-                          <CheckCircle className="h-6 w-6 text-success mx-auto mb-2" />
-                          <p className="text-sm font-medium text-success">
-                            ✅ Report can be submitted
-                          </p>
-                          <p className="text-xs text-success/80">
-                            Garbage detected with {(detectionResult.confidence * 100).toFixed(1)}% confidence
-                          </p>
-                        </div>
-                      )}
-                      
-                      {detectionResult.garbageDetected === false && (
-                        <div className="text-center p-3 bg-destructive/5 border border-destructive/20 rounded-lg">
-                          <X className="h-6 w-6 text-destructive mx-auto mb-2" />
-                          <p className="text-sm font-medium text-destructive">
-                            ❌ Report submission blocked
-                          </p>
-                          <p className="text-xs text-destructive/80">
-                            No garbage detected in this image. Please upload an image containing garbage.
-                          </p>
-                        </div>
-                      )}
-                      
-                      {detectionResult.garbageDetected === null && (
-                        <div className="text-center p-3 bg-warning/5 border border-warning/20 rounded-lg">
-                          <AlertCircle className="h-6 w-6 text-warning mx-auto mb-2" />
-                          <p className="text-sm font-medium text-warning">
-                            ⚠️ AI detection unavailable
-                          </p>
-                          <p className="text-xs text-warning/80">
-                            Manual verification required - please ensure image contains garbage
-                          </p>
+                      {detectionResult.confidence !== undefined && !detectionResult.error && (
+                        <div className="text-center">
+                          <div className="text-xs text-muted-foreground">
+                            Confidence: {(detectionResult.confidence * 100).toFixed(1)}%
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                detectionResult.confidence > 0.7 ? 'bg-green-500' :
+                                detectionResult.confidence > 0.4 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${detectionResult.confidence * 100}%` }}
+                            ></div>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -588,7 +589,7 @@ const Report = () => {
             <div className="space-y-2">
               <Label>Severity Level</Label>
               <p className="text-sm text-muted-foreground mb-3">
-                Select the priority level for this waste report
+                Select priority level for this waste report
               </p>
               <div className="flex gap-2">
                 <Button 
@@ -632,27 +633,14 @@ const Report = () => {
 
             <Button 
               variant="hero" 
-              className={`w-full transition-all duration-200 ${
-                !canSubmitReport && selectedImage
-                  ? 'opacity-50 cursor-not-allowed bg-muted hover:bg-muted' 
-                  : ''
-              }`}
+              className="w-full" 
               size="lg"
               onClick={handleSubmit}
-              disabled={isSubmitting || (!canSubmitReport && selectedImage)}
+              disabled={isSubmitting}
             >
               <CheckCircle className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Submitting..." : 
-               (!canSubmitReport && selectedImage) ? "Report Blocked - No Garbage Detected" :
-               "Submit Report"}
+              {isSubmitting ? "Submitting..." : "Submit Report"}
             </Button>
-
-            {!canSubmitReport && selectedImage && detectionResult?.garbageDetected === false && (
-              <div className="text-center text-sm text-muted-foreground bg-muted/30 p-3 rounded-lg border">
-                <AlertCircle className="h-4 w-4 inline mr-2" />
-                Upload an image containing garbage to enable report submission
-              </div>
-            )}
 
             <div className="text-center">
               <p className="text-sm text-muted-foreground">
