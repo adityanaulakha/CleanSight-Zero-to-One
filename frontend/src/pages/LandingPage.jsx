@@ -205,15 +205,16 @@ const LandingPageNew = () => {
               transition={{ duration: 0.8, delay: 0.8 }}
               className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
             >
-              <Button 
-                size="lg" 
-                className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-12 py-6 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
-                onClick={() => window.location.href = '/register'}
-              >
-                <Smartphone className="h-6 w-6 mr-3" />
-                Start Your Impact Journey
-                <ArrowRight className="h-6 w-6 ml-3" />
-              </Button>
+              <Link to="/register" style={{ textDecoration: 'none' }}>
+                <Button 
+                  size="lg" 
+                  className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-12 py-6 text-xl font-bold rounded-2xl shadow-2xl hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+                >
+                  <Smartphone className="h-6 w-6 mr-3" />
+                  Start Your Impact Journey <span role="img" aria-label="spark">✨</span>
+                  <ArrowRight className="h-6 w-6 ml-3" />
+                </Button>
+              </Link>
               
               <Button 
                 variant="outline" 
